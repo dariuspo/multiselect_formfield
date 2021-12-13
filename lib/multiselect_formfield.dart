@@ -27,12 +27,13 @@ class MultiSelectFormField extends FormField<dynamic> {
   final Color? checkBoxCheckColor;
   final Color? checkBoxActiveColor;
   final bool enabled;
+  final AutovalidateMode autovalidateMode;
 
   MultiSelectFormField({
     FormFieldSetter<dynamic>? onSaved,
     FormFieldValidator<dynamic>? validator,
     dynamic initialValue,
-    bool autovalidate = false,
+    this.autovalidateMode = AutovalidateMode.onUserInteraction,
     this.title = const Text('Title'),
     this.hintWidget = const Text('Tap to select one or more'),
     this.required = false,
@@ -62,14 +63,15 @@ class MultiSelectFormField extends FormField<dynamic> {
           onSaved: onSaved,
           validator: validator,
           initialValue: initialValue,
-          autovalidate: autovalidate,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           builder: (FormFieldState<dynamic> state) {
             List<Widget> _buildSelectedOptions(state) {
               List<Widget> selectedOptions = [];
 
               if (state.value != null) {
                 state.value.forEach((item) {
-                  var existingItem = dataSource!.singleWhere(((itm) => itm[valueField] == item),
+                  var existingItem = dataSource!.singleWhere(
+                      ((itm) => itm[valueField] == item),
                       orElse: () => null);
                   selectedOptions.add(Chip(
                     labelStyle: chipLabelStyle,
@@ -86,41 +88,42 @@ class MultiSelectFormField extends FormField<dynamic> {
             }
 
             return InkWell(
+              onTap: !enabled
+                  ? null
+                  : () async {
+                      List? initialSelected = state.value;
+                      if (initialSelected == null) {
+                        initialSelected = [];
+                      }
 
-              onTap:  !enabled ? null :() async {
-                List? initialSelected = state.value;
-                if (initialSelected == null) {
-                  initialSelected = [];
-                }
-
-                final items = <MultiSelectDialogItem<dynamic>>[];
+                      final items = <MultiSelectDialogItem<dynamic>>[];
                       dataSource!.forEach((item) {
-                  items.add(
-                      MultiSelectDialogItem(item[valueField], item[textField]));
-                });
+                        items.add(MultiSelectDialogItem(
+                            item[valueField], item[textField]));
+                      });
 
-                List? selectedValues = await showDialog<List>(
-                  context: state.context,
-                  builder: (BuildContext context) {
-                    return MultiSelectDialog(
-                      title: title,
-                      okButtonLabel: okButtonLabel,
-                      cancelButtonLabel: cancelButtonLabel,
-                      items: items,
-                      initialSelectedValues: initialSelected,
-                      labelStyle: dialogTextStyle,
-                      dialogShapeBorder: dialogShapeBorder,
-                      checkBoxActiveColor: checkBoxActiveColor,
-                      checkBoxCheckColor: checkBoxCheckColor,
-                    );
-                  },
-                );
+                      List? selectedValues = await showDialog<List>(
+                        context: state.context,
+                        builder: (BuildContext context) {
+                          return MultiSelectDialog(
+                            title: title,
+                            okButtonLabel: okButtonLabel,
+                            cancelButtonLabel: cancelButtonLabel,
+                            items: items,
+                            initialSelectedValues: initialSelected,
+                            labelStyle: dialogTextStyle,
+                            dialogShapeBorder: dialogShapeBorder,
+                            checkBoxActiveColor: checkBoxActiveColor,
+                            checkBoxCheckColor: checkBoxCheckColor,
+                          );
+                        },
+                      );
 
-                if (selectedValues != null) {
-                  state.didChange(selectedValues);
-                  state.save();
-                }
-              },
+                      if (selectedValues != null) {
+                        state.didChange(selectedValues);
+                        state.save();
+                      }
+                    },
               child: InputDecorator(
                 decoration: InputDecoration(
                   filled: true,
